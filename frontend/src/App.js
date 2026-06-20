@@ -896,7 +896,7 @@ function App() {
                     <span className="hero-pulse"></span> Available for Opportunities
                   </motion.div>
                   <motion.h1 variants={fadeInVariants} className="hero-title">
-                    Hi, I'm <br />
+                    <span className="hero-greeting">Hi, I'm</span> <br />
                     <span className="gradient-text glow-text">{config.personal.name}</span>
                   </motion.h1>
                   <motion.div variants={fadeInVariants} className="hero-subtitle">

@@ -422,6 +422,12 @@ section {
   margin-bottom: 1.5rem;
 }
 
+.hero-greeting {
+  color: var(--text-primary);
+  -webkit-text-fill-color: initial;
+  display: inline-block;
+}
+
 .hero-subtitle {
   font-size: 1.5rem;
   color: var(--text-secondary);
