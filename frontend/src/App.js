@@ -103,17 +103,17 @@ function App() {
   // Initialize Page Tracker & Scroll Listeners
   useEffect(() => {
     // 1. Track Visit
-    const trackVisit = async () => {
+    const trackVisit = async (pageName) => {
       try {
         await fetch(`${config.apiUrl}/api/visit`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ page: pageName || 'Home' })
         });
       } catch (err) {
         console.log('Local mode: visitor tracking inactive.');
       }
     };
-    trackVisit();
 
     // 2. Check for saved admin session
     const savedToken = localStorage.getItem('adminToken');
@@ -122,13 +122,19 @@ function App() {
       fetchDashboardData(savedToken);
     }
 
-    // 3. Hash routing check
+    // 3. Hash routing check & tracking
     const checkHash = () => {
-      if (window.location.hash === '#admin') {
+      const hash = window.location.hash;
+      if (hash === '#admin') {
         setIsAdminActive(true);
         window.scrollTo({ top: 0, behavior: 'smooth' });
+        trackVisit('Admin Dashboard');
       } else {
         setIsAdminActive(false);
+        const pageName = hash 
+          ? hash.substring(1).charAt(0).toUpperCase() + hash.substring(2)
+          : 'Home';
+        trackVisit(pageName);
       }
     };
     checkHash();
@@ -740,6 +746,7 @@ function App() {
                           <thead>
                             <tr>
                               <th>IP Address</th>
+                              <th>Visited Page</th>
                               <th>Browser</th>
                               <th>Platform</th>
                               <th>Time Captured</th>
@@ -749,6 +756,11 @@ function App() {
                             {visitorLogs.map((log) => (
                               <tr key={log._id}>
                                 <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{log.ip}</td>
+                                <td>
+                                  <span className="badge" style={{ fontSize: '0.7rem', color: '#a855f7', borderColor: 'rgba(168, 85, 247, 0.2)', backgroundColor: 'rgba(168, 85, 247, 0.1)' }}>
+                                    {log.page || 'Home'}
+                                  </span>
+                                </td>
                                 <td>{log.browser}</td>
                                 <td>
                                   <span className={`badge ${log.platform === 'Windows' || log.platform === 'macOS' ? 'badge-primary' : 'badge-secondary'}`} style={{ fontSize: '0.7rem' }}>

@@ -91,6 +91,7 @@ const VisitorSchema = new mongoose.Schema({
   ip: { type: String, default: 'Unknown' },
   browser: { type: String, default: 'Unknown' },
   platform: { type: String, default: 'Unknown' },
+  page: { type: String, default: 'Home' },
   visitedAt: { type: Date, default: Date.now }
 });
 const Visitor = mongoose.model('Visitor', VisitorSchema);
@@ -177,6 +178,7 @@ app.post('/api/contact', async (req, res) => {
 
 // 3. Track Website Visitor
 app.post('/api/visit', async (req, res) => {
+  const { page } = req.body;
   const userAgent = req.headers['user-agent'] || '';
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
   
@@ -199,7 +201,12 @@ app.post('/api/visit', async (req, res) => {
   else if (userAgent.includes('iPhone') || userAgent.includes('iPad')) platform = 'iOS';
 
   try {
-    const newVisitor = new Visitor({ ip: cleanIp, browser, platform });
+    const newVisitor = new Visitor({ 
+      ip: cleanIp, 
+      browser, 
+      platform, 
+      page: page || 'Home' 
+    });
     await newVisitor.save();
     return res.status(200).json({ success: true });
   } catch (error) {
