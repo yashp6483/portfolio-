@@ -82,6 +82,7 @@ const ContactSchema = new mongoose.Schema({
   email: { type: String, required: true },
   subject: { type: String, required: true },
   message: { type: String, required: true },
+  ip: { type: String, default: 'Unknown' },
   createdAt: { type: Date, default: Date.now }
 });
 const Contact = mongoose.model('Contact', ContactSchema);
@@ -89,6 +90,7 @@ const Contact = mongoose.model('Contact', ContactSchema);
 // 2. Visitors Schema
 const VisitorSchema = new mongoose.Schema({
   ip: { type: String, default: 'Unknown' },
+  name: { type: String, default: 'Visitor' },
   browser: { type: String, default: 'Unknown' },
   platform: { type: String, default: 'Unknown' },
   page: { type: String, default: 'Home' },
@@ -162,9 +164,18 @@ app.post('/api/contact', async (req, res) => {
     return res.status(400).json({ success: false, message: 'Please fill in all fields.' });
   }
 
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
+  const cleanIp = ip === '::1' ? '127.0.0.1' : ip.replace(/^.*:/, '');
+
   try {
-    const newContact = new Contact({ name, email, subject, message });
+    const newContact = new Contact({ name, email, subject, message, ip: cleanIp });
     await newContact.save();
+
+    // Update all previous visitor records from this IP to have the submitter's name
+    await Visitor.updateMany(
+      { ip: cleanIp, name: 'Visitor' },
+      { $set: { name: name } }
+    );
     
     // Trigger email notification in the background
     sendInquiryEmail(newContact);
@@ -178,7 +189,7 @@ app.post('/api/contact', async (req, res) => {
 
 // 3. Track Website Visitor
 app.post('/api/visit', async (req, res) => {
-  const { page } = req.body;
+  const { page, visitorName } = req.body;
   const userAgent = req.headers['user-agent'] || '';
   const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
   
@@ -201,8 +212,29 @@ app.post('/api/visit', async (req, res) => {
   else if (userAgent.includes('iPhone') || userAgent.includes('iPad')) platform = 'iOS';
 
   try {
+    let finalName = visitorName;
+
+    // Auto-resolve visitor name from IP if not explicitly provided
+    if (!finalName) {
+      // 1. Check contact messages submitted from this IP
+      const latestContact = await Contact.findOne({ ip: cleanIp }).sort({ createdAt: -1 });
+      if (latestContact) {
+        finalName = latestContact.name;
+      } else {
+        // 2. Check if there's any existing Visitor record with a known name
+        const existingWithName = await Visitor.findOne({ 
+          ip: cleanIp, 
+          name: { $ne: 'Visitor', $exists: true } 
+        }).sort({ visitedAt: -1 });
+        if (existingWithName) {
+          finalName = existingWithName.name;
+        }
+      }
+    }
+
     const newVisitor = new Visitor({ 
       ip: cleanIp, 
+      name: finalName || 'Visitor',
       browser, 
       platform, 
       page: page || 'Home' 

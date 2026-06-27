@@ -105,10 +105,14 @@ function App() {
     // 1. Track Visit
     const trackVisit = async (pageName) => {
       try {
+        const isAdmin = !!localStorage.getItem('adminToken');
         await fetch(`${config.apiUrl}/api/visit`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ page: pageName || 'Home' })
+          body: JSON.stringify({ 
+            page: pageName || 'Home',
+            visitorName: isAdmin ? 'Yash' : undefined
+          })
         });
       } catch (err) {
         console.log('Local mode: visitor tracking inactive.');
@@ -745,6 +749,7 @@ function App() {
                         <table className="admin-table">
                           <thead>
                             <tr>
+                              <th>Visitor Name</th>
                               <th>IP Address</th>
                               <th>Visited Page</th>
                               <th>Browser</th>
@@ -755,7 +760,14 @@ function App() {
                           <tbody>
                             {visitorLogs.map((log) => (
                               <tr key={log._id}>
-                                <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{log.ip}</td>
+                                <td style={{ fontWeight: 600 }}>
+                                  {log.name === 'Yash' ? (
+                                    <span className="badge badge-primary" style={{ textTransform: 'none', background: 'rgba(6, 182, 212, 0.2)' }}>Yash (Owner)</span>
+                                  ) : (
+                                    log.name || 'Visitor'
+                                  )}
+                                </td>
+                                <td style={{ color: 'var(--text-secondary)' }}>{log.ip}</td>
                                 <td>
                                   <span className="badge" style={{ fontSize: '0.7rem', color: '#a855f7', borderColor: 'rgba(168, 85, 247, 0.2)', backgroundColor: 'rgba(168, 85, 247, 0.1)' }}>
                                     {log.page || 'Home'}
